@@ -13,7 +13,7 @@
       version = "1.17.5b";
       src = pkgs.fetchurl {
         url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-x86_64.tar.xz";
-        sha256 = "13wih6gjzc2df3xf8gsrdhbbi806fzzk82682wfn4rfqzmcn1d01";
+        sha256 = "X5Q1OuEjbUWE8Y8E446SqvqpoExlTRw9R5TM0esRzP8=";
       };
 
       runtimeLibs = with pkgs; [
@@ -77,9 +77,9 @@
         installPhase = ''
           mkdir -p $out/bin $TMPDIR/zen-extract
           tar -xf ${src} -C $TMPDIR/zen-extract
-          cp -r $TMPDIR/zen-extract/* $out/bin
+          cp -r $TMPDIR/zen-extract/zen/* $out/bin
           install -D ${./.}/zen.desktop $out/share/applications/zen.desktop
-          install -D $TMPDIR/zen-extract/browser/chrome/icons/default/default128.png $out/share/icons/hicolor/128x128/apps/zen.png
+          install -D $TMPDIR/zen-extract/zen/browser/chrome/icons/default/default128.png $out/share/icons/hicolor/128x128/apps/zen.png
         '';
 
         fixupPhase = ''
