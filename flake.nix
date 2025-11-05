@@ -8,13 +8,13 @@
   outputs = { self, nixpkgs }:
     let
       system = "x86_64-linux";
-      version = "1.16.1b";
-      src = builtins.fetchTarball {
-        url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-x86_64.tar.xz";
-        sha256 = "04bb9f09kb0bmbgas5yb2qxnjh4gclq3bxnrzj1lijmf3w4240gd";
-      };
-
       pkgs = import nixpkgs { inherit system; };
+      
+      version = "1.17.5b";
+      src = pkgs.fetchurl {
+        url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-x86_64.tar.xz";
+        sha256 = "13wih6gjzc2df3xf8gsrdhbbi806fzzk82682wfn4rfqzmcn1d01";
+      };
 
       runtimeLibs = with pkgs; [
         libGL
@@ -72,13 +72,14 @@
         
         phases = [ "installPhase" "fixupPhase" ];
 
-        nativeBuildInputs = [ pkgs.makeWrapper pkgs.copyDesktopItems pkgs.wrapGAppsHook ];
+        nativeBuildInputs = [ pkgs.makeWrapper pkgs.copyDesktopItems pkgs.wrapGAppsHook3 pkgs.patchelf pkgs.xz ];
 
         installPhase = ''
-          mkdir -p $out/bin
-          cp -r ${src}/* $out/bin
+          mkdir -p $out/bin $TMPDIR/zen-extract
+          tar -xf ${src} -C $TMPDIR/zen-extract
+          cp -r $TMPDIR/zen-extract/* $out/bin
           install -D ${./.}/zen.desktop $out/share/applications/zen.desktop
-          install -D ${src}/browser/chrome/icons/default/default128.png $out/share/icons/hicolor/128x128/apps/zen.png
+          install -D $TMPDIR/zen-extract/browser/chrome/icons/default/default128.png $out/share/icons/hicolor/128x128/apps/zen.png
         '';
 
         fixupPhase = ''
