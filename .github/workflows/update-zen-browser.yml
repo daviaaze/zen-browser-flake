@@ -51,6 +51,9 @@ jobs:
           # Update version in flake.nix
           sed -i "s/version = \"$CURRENT_VERSION\"/version = \"$LATEST_VERSION\"/" flake.nix
           
+          # Get current SHA256 from flake.nix
+          CURRENT_SHA=$(grep -oP 'sha256 = "\K[^"]+' flake.nix)
+
           # Compute the new hash
           echo "Computing new hash for version $LATEST_VERSION..."
           NEW_URL="https://github.com/zen-browser/desktop/releases/download/${LATEST_VERSION}/zen.linux-x86_64.tar.xz"
@@ -63,10 +66,18 @@ jobs:
           fi
           
           # Update the hash in flake.nix
-          sed -i "s|sha256 = \"\"|sha256 = \"$NEW_HASH\"|" flake.nix
+          sed -i "s|sha256 = \"$CURRENT_SHA\"|sha256 = \"$NEW_HASH\"|" flake.nix
           
           echo "Hash: $NEW_HASH"
           echo "Updated flake.nix to version $LATEST_VERSION"
+
+      - name: Nix Flake Check
+        if: steps.check_updates.outputs.update_needed == 'true'
+        run: nix flake check
+
+      - name: Nix Build
+        if: steps.check_updates.outputs.update_needed == 'true'
+        run: nix build
 
       - name: Create Pull Request
         if: steps.check_updates.outputs.update_needed == 'true'
