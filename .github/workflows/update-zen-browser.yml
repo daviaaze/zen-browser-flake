@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
@@ -63,7 +63,7 @@ jobs:
           fi
           
           # Update the hash in flake.nix
-          sed -i "s|sha256 = \"\"|sha256 = \"$NEW_HASH\"|" flake.nix
+          sed -i "s|sha256 = \".*\"|sha256 = \"$NEW_HASH\"|" flake.nix
           
           echo "Hash: $NEW_HASH"
           echo "Updated flake.nix to version $LATEST_VERSION"
