@@ -52,7 +52,8 @@ jobs:
           sed -i "s/version = \"$CURRENT_VERSION\"/version = \"$LATEST_VERSION\"/" flake.nix
           
           # Compute the new hash
-          echo "Computing new hash for version $LATEST_VERSION..."
+          echo "Computing new hash for version 
+          $LATEST_VERSION..."
           NEW_URL="https://github.com/zen-browser/desktop/releases/download/${LATEST_VERSION}/zen.linux-x86_64.tar.xz"
           NEW_HASH=$(nix-prefetch-url --unpack "$NEW_URL" 2>&1 | tail -1)
           
@@ -81,6 +82,6 @@ jobs:
             - **New version**: ${{ steps.check_updates.outputs.latest_version }}
             
             Please review the changes and verify the build works correctly.
-          branch: update-zen-browser
+          branch: update-zen-browser-${{ steps.check_updates.outputs.latest_version }}
           delete-branch: true
 
