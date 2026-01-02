@@ -43,20 +43,19 @@ jobs:
 
           echo "Updating..."
           
-          # Update version string
+          # Update version string (for metadata/pname)
           sed -i "s/version = \"$CURRENT\"/version = \"$LATEST\"/" flake.nix
 
-          # Compute SRI hash
-          URL="https://github.com/zen-browser/desktop/releases/download/${LATEST}/zen.linux-x86_64.tar.xz"
-          HASH=$(nix-prefetch-url --unpack "$URL" 2>&1 | tail -1 | xargs nix hash to-sri --type sha256)
-
-          if [ -z "$HASH" ]; then
-            echo "Error computing hash"
-            exit 1
-          fi
-
-          # Update hash
-          sed -i "s|sha256 = \".*\"|sha256 = \"$HASH\"|" flake.nix
+          # Update the input URL
+          # We need to construct the new URL since it's hardcoded in the input
+          NEW_URL="https://github.com/zen-browser/desktop/releases/download/${LATEST}/zen.linux-x86_64.tar.xz"
+          
+          # Use sed to replace the URL line. Matches "zen-src.url = "..."
+          # We match the line with zen-src.url and replace the string inside quotes
+          sed -i "s|zen-src.url = \".*\"|zen-src.url = \"$NEW_URL\"|" flake.nix
+          
+          # Update the flake lockfile (handles the hash)
+          nix flake update zen-src
           
           echo "update_needed=true" >> $GITHUB_OUTPUT
           echo "latest_version=$LATEST" >> $GITHUB_OUTPUT
