@@ -2,7 +2,7 @@ name: Update Zen Browser
 
 on:
   schedule:
-    - cron: '0 3 * * 1'  # Runs weekly on Sunday at 3 AM UTC
+    - cron: '0 3 * * 1'  # Runs weekly on Monday at 3 AM UTC
   workflow_dispatch:  # Allows manual triggering
 
 jobs:
@@ -15,8 +15,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          persist-credentials: false
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
@@ -36,43 +34,43 @@ jobs:
           echo "Latest:  $LATEST"
 
           if [ "$LATEST" == "$CURRENT" ]; then
-            echo "Up to date."
+            echo "Already up to date."
             echo "update_needed=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          echo "Updating..."
-          
-          # Update version string (for metadata/pname)
+          echo "Updating $CURRENT -> $LATEST ..."
+
+          # Compute sha256 of the new tarball (SRI format, as used by pkgs.fetchurl)
+          URL="https://github.com/zen-browser/desktop/releases/download/${LATEST}/zen.linux-x86_64.tar.xz"
+          HASH=$(nix-prefetch-url --type sha256 "$URL" 2>/dev/null)
+          NEW_SHA256=$(nix hash to-sri --type sha256 "$HASH")
+
+          echo "New sha256: $NEW_SHA256"
+
+          # Update version string in flake.nix
           sed -i "s/version = \"$CURRENT\"/version = \"$LATEST\"/" flake.nix
 
-          # Update the input URL
-          # We need to construct the new URL since it's hardcoded in the input
-          NEW_URL="https://github.com/zen-browser/desktop/releases/download/${LATEST}/zen.linux-x86_64.tar.xz"
-          
-          # Use sed to replace the URL line. Matches "zen-src.url = "..."
-          # We match the line with zen-src.url and replace the string inside quotes
-          sed -i "s|zen-src.url = \".*\"|zen-src.url = \"$NEW_URL\"|" flake.nix
-          
-          # Update the flake lockfile (handles the hash)
-          nix flake update zen-src
-          
+          # Update sha256 hash in flake.nix
+          sed -i "s|sha256 = \"sha256-[^\"]*\"|sha256 = \"$NEW_SHA256\"|" flake.nix
+
           echo "update_needed=true" >> $GITHUB_OUTPUT
           echo "latest_version=$LATEST" >> $GITHUB_OUTPUT
           echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
         if: steps.update.outputs.update_needed == 'true'
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v7
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: 'chore: Update Zen Browser to ${{ steps.update.outputs.latest_version }}'
           title: 'chore: Update Zen Browser to ${{ steps.update.outputs.latest_version }}'
           body: |
             Automated update of Zen Browser.
-            
+
             - **Previous version**: ${{ steps.update.outputs.current_version }}
             - **New version**: ${{ steps.update.outputs.latest_version }}
-            
-            Please review the changes and verify the build works correctly.
+
+            The build will be tested automatically. This PR will be merged once all checks pass.
           branch: update-zen-browser-${{ steps.update.outputs.latest_version }}
           delete-branch: true
