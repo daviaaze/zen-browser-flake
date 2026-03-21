@@ -5,6 +5,9 @@ on:
     - cron: '0 3 * * 1'  # Runs weekly on Monday at 3 AM UTC
   workflow_dispatch:  # Allows manual triggering
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -62,7 +65,9 @@ jobs:
         if: steps.update.outputs.update_needed == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # A PAT is required so the created PR triggers workflow runs.
+          # GITHUB_TOKEN-created PRs do not trigger workflows (GitHub limitation).
+          token: ${{ secrets.PAT }}
           commit-message: 'chore: Update Zen Browser to ${{ steps.update.outputs.latest_version }}'
           title: 'chore: Update Zen Browser to ${{ steps.update.outputs.latest_version }}'
           body: |

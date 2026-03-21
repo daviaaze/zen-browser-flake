@@ -5,6 +5,9 @@ on:
     branches:
       - master
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -44,6 +47,6 @@ jobs:
       - name: Auto-merge if this is a bot update PR
         if: startsWith(github.head_ref, 'update-zen-browser-')
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT }}
         run: |
           gh pr merge --merge --auto ${{ github.event.pull_request.number }}
