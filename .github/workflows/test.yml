@@ -49,4 +49,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PAT || github.token }}
         run: |
-          gh pr merge --merge ${{ github.event.pull_request.number }}
+          gh pr merge --auto --merge ${{ github.event.pull_request.number }}
