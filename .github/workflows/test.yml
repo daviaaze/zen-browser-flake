@@ -47,6 +47,6 @@ jobs:
       - name: Auto-merge if this is a bot update PR
         if: startsWith(github.head_ref, 'update-zen-browser-')
         env:
-          GH_TOKEN: ${{ secrets.PAT }}
+          GH_TOKEN: ${{ secrets.PAT || github.token }}
         run: |
-          gh pr merge --merge --auto ${{ github.event.pull_request.number }}
+          gh pr merge --auto --merge ${{ github.event.pull_request.number }}
