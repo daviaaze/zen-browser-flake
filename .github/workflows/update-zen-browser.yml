@@ -5,8 +5,9 @@ on:
     - cron: '0 3 * * 1'  # Runs weekly on Monday at 3 AM UTC
   workflow_dispatch:  # Allows manual triggering
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+concurrency:
+  group: update-zen-browser
+  cancel-in-progress: true
 
 jobs:
   update:
@@ -17,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
@@ -46,8 +47,7 @@ jobs:
 
           # Compute sha256 of the new tarball (SRI format, as used by pkgs.fetchurl)
           URL="https://github.com/zen-browser/desktop/releases/download/${LATEST}/zen.linux-x86_64.tar.xz"
-          HASH=$(nix-prefetch-url --type sha256 "$URL" 2>/dev/null)
-          NEW_SHA256=$(nix hash to-sri --type sha256 "$HASH")
+          NEW_SHA256=$(nix store prefetch-file --json --hash-type sha256 "$URL" | jq -r .hash)
 
           echo "New sha256: $NEW_SHA256"
 
@@ -63,7 +63,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.update.outputs.update_needed == 'true'
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           # A PAT is required so the created PR triggers workflow runs.
           # GITHUB_TOKEN-created PRs do not trigger workflows (GitHub limitation).
