@@ -12,10 +12,10 @@
     system = "x86_64-linux";
     pkgs = import nixpkgs {inherit system;};
 
-    version = "1.19.13b";
+    version = "1.20b";
     src = pkgs.fetchurl {
       url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-x86_64.tar.xz";
-      sha256 = "sha256-38ef+0RMbb+TWmD2/0xcsZBWe6om+DyOnPhFdXHh2QA=";
+      sha256 = "sha256-UdkcvHsbyyDfNFU8z3PzHMVc2vnTYTbWJQHFRtzZflg=";
     };
 
     runtimeLibs = with pkgs;
