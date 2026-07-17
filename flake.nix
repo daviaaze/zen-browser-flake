@@ -18,89 +18,72 @@
       sha256 = "sha256-7/SQFSwhuaVbhjud8CNwwwVn4QJ/44ju6TntQIK1OyA=";
     };
 
-    runtimeLibs = with pkgs;
-      [
-        libGL
-        libGLU
-        libevent
-        libffi
-        libjpeg
-        libpng
-        libstartup_notification
-        libvpx
-        libwebp
-        stdenv.cc.cc
-        fontconfig
-        libxkbcommon
-        zlib
-        freetype
+    zen-unwrapped = pkgs.stdenv.mkDerivation {
+      pname = "zen-browser-unwrapped";
+      inherit version src;
+
+      nativeBuildInputs = with pkgs; [
+        autoPatchelfHook
+        wrapGAppsHook3
+        patchelfUnstable
+      ];
+
+      buildInputs = with pkgs; [
         gtk3
-        libxml2
-        dbus
-        xcb-util-cursor
+        adwaita-icon-theme
         alsa-lib
-        libpulseaudio
-        pango
-        atk
-        cairo
-        gdk-pixbuf
-        glib
-        udev
-        libva
-        mesa
-        libnotify
-        cups
-        pciutils
-        ffmpeg
-        libglvnd
-        pipewire
-      ]
-      ++ (with pkgs.xorg; [
-        libxcb
-        libX11
-        libXcursor
-        libXrandr
-        libXi
-        libXext
-        libXcomposite
-        libXdamage
-        libXfixes
-        libXScrnSaver
-      ]);
-  in {
-    packages."${system}".default = pkgs.stdenv.mkDerivation {
-      inherit version;
-      pname = "zen-browser";
+        dbus-glib
+        libxtst
+        stdenv.cc.cc
+      ];
 
-      phases = ["installPhase" "fixupPhase"];
+      # Libraries that are dlopen'd at runtime — added to rpath
+      # so the binaries can find them without LD_LIBRARY_PATH pollution
+      runtimeDependencies = with pkgs; [libva.out];
+      appendRunpaths = with pkgs; ["${pipewire}/lib"];
 
-      nativeBuildInputs = [pkgs.makeWrapper pkgs.copyDesktopItems pkgs.wrapGAppsHook3 pkgs.patchelf pkgs.xz];
+      # Mozilla uses "relrhack" for manual relocation processing
+      patchelfFlags = ["--no-clobber-old-sections"];
 
       installPhase = ''
-        mkdir -p $out/bin $TMPDIR/zen-extract
-        tar -xf ${src} -C $TMPDIR/zen-extract
-        cp -r $TMPDIR/zen-extract/zen/* $out/bin
-        install -D ${./.}/zen.desktop $out/share/applications/zen.desktop
-        install -D $TMPDIR/zen-extract/zen/browser/chrome/icons/default/default128.png $out/share/icons/hicolor/128x128/apps/zen.png
+        runHook preInstall
+
+        mkdir -p $out/lib/zen-${version} $out/bin
+        cp -r * $out/lib/zen-${version}/
+        ln -s $out/lib/zen-${version}/zen $out/bin/zen
+
+        runHook postInstall
       '';
 
-      fixupPhase = ''
-        chmod 755 $out/bin/*
-        patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/bin/zen
-        wrapProgram $out/bin/zen --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}" \
-                  --set MOZ_LEGACY_PROFILES 1 --set MOZ_ALLOW_DOWNGRADE 1 --set MOZ_APP_LAUNCHER zen --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH"
-        patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/bin/zen-bin
-        wrapProgram $out/bin/zen-bin --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}" \
-                  --set MOZ_LEGACY_PROFILES 1 --set MOZ_ALLOW_DOWNGRADE 1 --set MOZ_APP_LAUNCHER zen --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH"
-        patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/bin/glxtest
-        wrapProgram $out/bin/glxtest --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}"
-        patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/bin/updater
-        wrapProgram $out/bin/updater --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}"
-        patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/bin/vaapitest
-        wrapProgram $out/bin/vaapitest --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}"
-      '';
+      passthru = {
+        applicationName = "Zen Browser";
+        binaryName = "zen";
+        libName = "zen-${version}";
+        gtk3 = pkgs.gtk3;
+        ffmpegSupport = true;
+        gssSupport = true;
+      };
 
-      meta.mainProgram = "zen";
+      meta = {
+        description = "Zen Browser, a privacy-focused web browser built on Firefox";
+        homepage = "https://zen-browser.app";
+        license = pkgs.lib.licenses.mpl20;
+        platforms = ["x86_64-linux"];
+        mainProgram = "zen";
+      };
+    };
+  in {
+    packages.${system} = {
+      inherit zen-unwrapped;
+      default = pkgs.wrapFirefox zen-unwrapped {
+        pname = "zen-browser";
+        applicationName = "zen";
+        libName = "zen-${version}";
+        wmClass = "zen-alpha";
+        extraPolicies = {
+          DisableAppUpdate = true;
+        };
+      };
     };
   };
 }
